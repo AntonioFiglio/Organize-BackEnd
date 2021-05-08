@@ -5,6 +5,13 @@ const { v4: uuid } = require("uuid");
 
 const User = require("../model/User");
 
+function generateToken(params = {}) {
+  return jwt.sign(params, process.env.HASH_MD5, {
+    algorithm: "HS256",
+    expiresIn: 86400,
+  });
+}
+
 module.exports = {
   async signUp(req, res) {
     try {
@@ -15,18 +22,25 @@ module.exports = {
       }
 
       if (await User.findOne({ email })) {
-        return res.status(400).json({ message: "Registration failed" });
+        return res.status(400).json({ message: "User already exists" });
       }
 
-      const newUser = await new User({
+      const user = await new User({
         _id: uuid(),
         name: name,
         email: email,
         password: password,
       });
 
-      await newUser.save();
-      return res.status(200).json({ message: "sucess" });
+      await user.save();
+
+      user.password = undefined;
+
+      return res.status(200).json({
+        message: "sucess",
+        user,
+        token: generateToken({ id: user._id }),
+      });
     } catch (err) {
       return res.status(400).json({ message: "Registration failed" });
     }
@@ -37,7 +51,7 @@ module.exports = {
 
     try {
       if (!email || !password) {
-        throw "Missing arguments";
+        return res.status(400).json({ message: "Missing arguments" });
       }
 
       const user = await User.findOne({ email }).select("+password");
@@ -51,11 +65,12 @@ module.exports = {
       }
 
       user.password = undefined;
-      const Token = jwt.sign({ id: user._id }, process.env.HASH_MD5, {
-        expiresIn: 86400,
-      });
 
-      return res.status(200).json({ message: "sucess", user, Token });
+      return res.status(200).json({
+        message: "sucess",
+        user,
+        token: generateToken({ id: user._id }),
+      });
     } catch (err) {
       return res.status(400).json({ message: "SignIn failed" });
     }
