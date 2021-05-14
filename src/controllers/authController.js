@@ -75,4 +75,7 @@ module.exports = {
       return res.status(400).json({ message: "SignIn failed" });
     }
   },
+  async Logout(req, res) {
+    res.json({ message: "sucess" });
+  },
 };
